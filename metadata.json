@@ -1,0 +1,8 @@
+{
+  "name": "SPACE CARE — Family Connect",
+  "description": "AI-powered astronaut family companion app for mission updates, approved wellness summaries, family messaging, and reassuring mission explanations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
