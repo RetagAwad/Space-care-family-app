@@ -1,5 +1,5 @@
-import React from 'react';
-import { Globe, LogOut, RotateCcw, Shield, UserCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Globe, LogOut, RotateCcw } from 'lucide-react';
 import { AstronautProfile, FamilyUser, Language, NotificationPrefs } from '../types';
 import { getCopy } from '../i18n';
 import { SafeImage } from '../components/SafeImage';
@@ -26,170 +26,148 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onSignOut,
 }) => {
   const t = getCopy(lang);
+  const [resetNotice, setResetNotice] = useState(false);
 
-  const prefItems: Array<{ key: keyof NotificationPrefs; label: string; labelAr: string }> = [
-    {
-      key: 'wellnessUpdates',
-      label: 'New approved wellness updates',
-      labelAr: 'تحديثات العافية المعتمدة الجديدة',
-    },
-    {
-      key: 'missionMilestones',
-      label: 'Mission milestones & orbital events',
-      labelAr: 'محطات المهمة والأحداث المدارية',
-    },
-    {
-      key: 'familyMessages',
-      label: 'Family channel messages',
-      labelAr: 'رسائل قناة العائلة',
-    },
-    {
-      key: 'emergencyAnnouncements',
-      label: 'Official emergency information notices',
-      labelAr: 'إشعارات الطوارئ الرسمية',
-    },
-    {
-      key: 'quietHoursEnabled',
-      label: 'Mute non-urgent alerts overnight (23:00 – 07:00)',
-      labelAr: 'تفعيل ساعات الهدوء الليلية (23:00 – 07:00)',
-    },
-  ];
+  const handleReset = () => {
+    onResetDemo();
+    setResetNotice(true);
+    setTimeout(() => setResetNotice(false), 3500);
+  };
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl sm:text-3xl font-bold text-white">
+    <div className="max-w-3xl mx-auto space-y-6">
+      <h1 className="font-display text-3xl sm:text-4xl font-bold text-white">
         {t.profile.title}
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Family Profile & Linked Astronaut */}
-        <section className="lg:col-span-5 rounded-3xl bg-[#0C1425] border border-white/10 p-5 sm:p-6 space-y-5">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-blue-600/25 border border-blue-400/35 flex items-center justify-center text-cyan-200 shrink-0">
-              <UserCheck className="w-5 h-5" />
+      {/* Family Member & Son Card */}
+      <section className="rounded-3xl bg-[#0E172B] border border-white/15 p-6 space-y-5">
+        <div className="space-y-1">
+          <p className="text-sm sm:text-base text-cyan-300 font-semibold">
+            {t.profile.familyLabel}
+          </p>
+          <p className="text-2xl font-bold text-white">
+            {lang === 'ar' ? user.nameAr : user.name}
+          </p>
+          <p className="text-lg text-slate-200">
+            {lang === 'ar' ? user.relationAr : user.relation}
+          </p>
+        </div>
+
+        <div className="pt-4 border-t border-white/15 space-y-3">
+          <p className="text-sm sm:text-base text-cyan-300 font-semibold">
+            {t.profile.sonLabel}
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-cyan-300/50 shrink-0">
+              <SafeImage
+                src={astronaut.avatarUrl}
+                alt={lang === 'ar' ? astronaut.nameAr : astronaut.name}
+                className="w-full h-full object-cover"
+                fallbackTitle={astronaut.name}
+              />
             </div>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-white truncate">
-                {lang === 'ar' ? user.nameAr : user.name}
-              </h2>
-              <p className="text-xs text-slate-300">
-                {lang === 'ar' ? user.relationAr : user.relation}
+            <div className="space-y-1">
+              <p className="text-xl sm:text-2xl font-bold text-white">
+                {lang === 'ar' ? astronaut.nameAr : astronaut.name}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">{user.email}</p>
+              <p className="text-base sm:text-lg text-slate-200">
+                {lang === 'ar' ? astronaut.missionLabelAr : astronaut.missionLabel}
+              </p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="pt-4 border-t border-white/10 space-y-3">
-            <p className="text-xs font-medium text-cyan-300">{t.profile.linkedAstronaut}</p>
-            <div className="flex items-center gap-3.5 rounded-2xl bg-[#080E1B] border border-white/10 p-3.5">
-              <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
-                <SafeImage
-                  src={astronaut.avatarUrl}
-                  alt={astronaut.name}
-                  className="w-full h-full object-cover"
-                  fallbackTitle={astronaut.name}
-                />
-              </div>
-              <div className="min-w-0 space-y-0.5">
-                <p className="text-sm font-semibold text-white truncate">
-                  {lang === 'ar' ? astronaut.nameAr : astronaut.name}
-                </p>
-                <p className="text-xs text-slate-300 truncate">
-                  {lang === 'ar' ? astronaut.missionNameAr : astronaut.missionName}
-                </p>
-                <p className="text-xs font-mono-tabular text-cyan-300">
-                  {astronaut.callsign} · {astronaut.expedition}
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Large Easy Language Switch */}
+      <section className="rounded-3xl bg-[#0E172B] border border-white/15 p-6 space-y-4">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+          <Globe className="w-6 h-6 text-cyan-300" />
+          <span>{t.profile.languageTitle}</span>
+        </h2>
 
-          {/* Language Selector */}
-          <div className="pt-4 border-t border-white/10 space-y-2.5">
-            <p className="text-xs font-medium text-slate-300 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-cyan-300" />
-              <span>{t.profile.language}</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onChangeLang('en')}
-                className={`min-h-[44px] rounded-xl text-sm font-medium border transition-colors ${
-                  lang === 'en'
-                    ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-200'
-                    : 'bg-[#080E1B] border-white/10 text-slate-300 hover:text-white'
-                }`}
-              >
-                English
-              </button>
-              <button
-                type="button"
-                onClick={() => onChangeLang('ar')}
-                className={`min-h-[44px] rounded-xl text-sm font-medium border transition-colors ${
-                  lang === 'ar'
-                    ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-200'
-                    : 'bg-[#080E1B] border-white/10 text-slate-300 hover:text-white'
-                }`}
-              >
-                العربية
-              </button>
-            </div>
-          </div>
-        </section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onChangeLang('en')}
+            className={`min-h-[60px] px-5 py-3 rounded-2xl border text-xl font-bold transition-colors ${
+              lang === 'en'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                : 'bg-[#080D1A] text-white border-white/20 hover:bg-white/10'
+            }`}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeLang('ar')}
+            className={`min-h-[60px] px-5 py-3 rounded-2xl border text-xl font-bold transition-colors ${
+              lang === 'ar'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                : 'bg-[#080D1A] text-white border-white/20 hover:bg-white/10'
+            }`}
+          >
+            العربية (مصر)
+          </button>
+        </div>
+      </section>
 
-        {/* Preferences, Privacy & About */}
-        <section className="lg:col-span-7 rounded-3xl bg-[#0C1425] border border-white/10 p-5 sm:p-6 space-y-6">
-          <div className="space-y-3">
-            <h2 className="text-base font-semibold text-white">{t.profile.notifications}</h2>
-            <div className="divide-y divide-white/10">
-              {prefItems.map((item) => (
-                <label
-                  key={item.key}
-                  className="flex items-center justify-between gap-4 py-3 cursor-pointer min-h-[48px]"
-                >
-                  <span className="text-sm text-slate-200">
-                    {lang === 'ar' ? item.labelAr : item.label}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={prefs[item.key]}
-                    onChange={() => onUpdatePref(item.key)}
-                    className="w-5 h-5 rounded border-white/25 bg-[#070C17] text-cyan-400 focus:ring-cyan-400 shrink-0"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
+      {/* Simple Sound & Alert Switches */}
+      <section className="rounded-3xl bg-[#0E172B] border border-white/15 p-6 space-y-4">
+        <h2 className="text-xl font-bold text-white">{t.profile.alertsTitle}</h2>
 
-          <div className="pt-4 border-t border-white/10 space-y-3">
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Shield className="w-4 h-4 text-cyan-300" />
-              <span>{t.profile.aboutTitle}</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {t.profile.aboutBody}
-            </p>
-          </div>
+        <div className="divide-y divide-white/15">
+          <label className="flex items-center justify-between gap-4 py-3.5 cursor-pointer min-h-[60px]">
+            <span className="text-lg text-slate-100">{t.profile.soundAlerts}</span>
+            <input
+              type="checkbox"
+              checked={prefs.messageSounds}
+              onChange={() => onUpdatePref('messageSounds')}
+              className="w-7 h-7 rounded border-white/30 bg-[#070B16] text-emerald-400 shrink-0"
+            />
+          </label>
 
-          <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              onClick={onResetDemo}
-              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-slate-200 inline-flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>{t.profile.resetDemo}</span>
-            </button>
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/30 text-xs font-semibold text-rose-200 inline-flex items-center justify-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>{t.profile.signOut}</span>
-            </button>
-          </div>
-        </section>
+          <label className="flex items-center justify-between gap-4 py-3.5 cursor-pointer min-h-[60px]">
+            <span className="text-lg text-slate-100">{t.profile.missionAlerts}</span>
+            <input
+              type="checkbox"
+              checked={prefs.missionAlerts}
+              onChange={() => onUpdatePref('missionAlerts')}
+              className="w-7 h-7 rounded border-white/30 bg-[#070B16] text-emerald-400 shrink-0"
+            />
+          </label>
+        </div>
+      </section>
+
+      {resetNotice && (
+        <div
+          role="status"
+          className="rounded-2xl bg-emerald-500/20 border border-emerald-400/50 px-5 py-3.5 text-lg font-semibold text-emerald-100 flex items-center gap-2.5"
+        >
+          <Check className="w-6 h-6 text-emerald-300 shrink-0" />
+          <span>{t.profile.resetDone}</span>
+        </div>
+      )}
+
+      {/* Large Reset & Sign Out Buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <button
+          type="button"
+          onClick={handleReset}
+          className="min-h-[60px] px-5 py-3.5 rounded-2xl bg-[#111B33] hover:bg-[#192747] border border-white/20 text-lg font-bold text-white flex items-center justify-center gap-2.5 transition-colors"
+        >
+          <RotateCcw className="w-5 h-5" />
+          <span>{t.profile.resetButton}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="min-h-[60px] px-5 py-3.5 rounded-2xl bg-red-600/20 hover:bg-red-600/35 border border-red-400/40 text-lg font-bold text-red-100 flex items-center justify-center gap-2.5 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>{t.profile.signOutButton}</span>
+        </button>
       </div>
     </div>
   );

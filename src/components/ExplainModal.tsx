@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, AlertCircle } from 'lucide-react';
+import { X, BookOpen, Info } from 'lucide-react';
 import { Language } from '../types';
 
 interface ExplainModalProps {
@@ -8,7 +8,6 @@ interface ExplainModalProps {
   title: string;
   explanation: string;
   loading: boolean;
-  mode?: 'live' | 'demo-fallback';
   lang: Language;
 }
 
@@ -18,72 +17,60 @@ export const ExplainModal: React.FC<ExplainModalProps> = ({
   title,
   explanation,
   loading,
-  mode,
   lang,
 }) => {
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="explain-modal-title"
     >
-      <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl bg-[#0D1526] border border-white/15 shadow-2xl overflow-hidden">
-        <div className="sm:hidden w-10 h-1.5 bg-slate-600 rounded-full mx-auto mt-3" />
-        <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3 border-b border-white/10">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center shrink-0 text-cyan-300">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-cyan-300 font-medium">
-                {lang === 'ar' ? 'شرح المهمة بالذكاء الاصطناعي' : 'AI Mission Explainer'}
-              </p>
-              <h3 id="explain-modal-title" className="text-base font-semibold text-white truncate">
-                {title}
-              </h3>
-            </div>
+      <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-[#0E172B] border border-white/20 shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-white/15">
+          <div className="flex items-center gap-3 min-w-0">
+            <BookOpen className="w-6 h-6 text-cyan-300 shrink-0" />
+            <h3 id="explain-modal-title" className="text-xl font-bold text-white truncate">
+              {title}
+            </h3>
           </div>
           <button
             onClick={onClose}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-2 focus-visible:outline-cyan-400"
+            className="min-w-[52px] min-h-[52px] flex items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-colors"
             aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-6 space-y-5">
           {loading ? (
-            <div className="space-y-2.5 py-4" aria-live="polite">
-              <div className="h-4 bg-white/10 rounded w-5/6 animate-pulse" />
-              <div className="h-4 bg-white/10 rounded w-full animate-pulse" />
-              <div className="h-4 bg-white/10 rounded w-3/4 animate-pulse" />
-            </div>
+            <p className="text-lg text-cyan-200 py-4" aria-live="polite">
+              {lang === 'ar' ? 'بنجهزلك شرح بسيط...' : 'Preparing a simple explanation...'}
+            </p>
           ) : (
-            <p className="text-sm sm:text-base leading-relaxed text-slate-200 whitespace-pre-line">
+            <p className="text-lg sm:text-xl leading-relaxed text-slate-100 whitespace-pre-line">
               {explanation}
             </p>
           )}
 
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-slate-400">
-            <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 p-4 rounded-2xl bg-white/5 border border-white/10 text-sm sm:text-base text-slate-300">
+            <Info className="w-5 h-5 text-cyan-300 shrink-0 mt-0.5" />
             <span>
               {lang === 'ar'
-                ? 'شرح مبسّط لأغراض التوضيح العائلي بناءً على بيانات العرض فقط، ولا يُعد تشخيصاً طبياً.'
-                : 'Plain-language family explanation based on simulated demo information only. Not a medical diagnosis.'}
-              {mode === 'demo-fallback' &&
-                (lang === 'ar' ? ' · وضع الشرح التجريبي المحلي' : ' · Local fallback mode')}
+                ? 'ده شرح بسيط للتوضيح العائلي من بيانات العرض التجريبية ومش تشخيص طبي.'
+                : 'Simple explanation from demo data for family comfort. Not medical advice.'}
             </span>
           </div>
 
           <button
             onClick={onClose}
-            className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm transition-colors"
+            className="w-full min-h-[60px] py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xl transition-colors"
           >
-            {lang === 'ar' ? 'حسناً، فهمت' : 'Got it'}
+            {lang === 'ar' ? 'تمام، فهمت' : 'OK, Got It'}
           </button>
         </div>
       </div>

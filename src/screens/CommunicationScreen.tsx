@@ -1,206 +1,429 @@
-import React, { useState } from 'react';
-import { CheckCheck, Info, Megaphone, Send } from 'lucide-react';
-import { FamilyMessage, FamilyUser, Language } from '../types';
+import React, { useRef, useState } from 'react';
+import {
+  Camera,
+  Check,
+  CheckCheck,
+  Mic,
+  Phone,
+  Send,
+  Smile,
+  Square,
+  Video,
+  X,
+} from 'lucide-react';
+import { AstronautProfile, FamilyMessage, Language } from '../types';
 import { getCopy } from '../i18n';
-import { QUICK_MESSAGE_TEMPLATES } from '../data/demoData';
+import { DEMO_PHOTOS, QUICK_EMOJIS, QUICK_FRIENDLY_REPLIES } from '../data/demoData';
+import { SafeImage } from '../components/SafeImage';
 
 interface CommunicationScreenProps {
   lang: Language;
-  user: FamilyUser;
+  astronaut: AstronautProfile;
   messages: FamilyMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (payload: {
+    text: string;
+    imageUrl?: string;
+    voiceDurationSec?: number;
+  }) => void;
+  onStartCall: (mode: 'voice' | 'video') => void;
 }
 
 export const CommunicationScreen: React.FC<CommunicationScreenProps> = ({
   lang,
-  user,
+  astronaut,
   messages,
   onSendMessage,
+  onStartCall,
 }) => {
   const t = getCopy(lang);
-  const [tab, setTab] = useState<'chat' | 'announcements'>('chat');
   const [draft, setDraft] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [confirmation, setConfirmation] = useState('');
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!draft.trim()) return;
-    onSendMessage(draft.trim());
-    setDraft('');
+  const showSentToast = () => {
+    setConfirmation(t.messages.sentConfirmation);
+    setTimeout(() => setConfirmation(''), 3500);
   };
 
-  const announcements = [
-    {
-      id: 'ann-1',
-      date: lang === 'ar' ? 'اليوم · مركز القاهرة' : 'Today · Cairo Liaison Desk',
-      title:
-        lang === 'ar'
-          ? 'تأكيد نافذة المكالمة المرئية يوم السبت'
-          : 'Saturday Family Video Window Confirmed',
-      body:
-        lang === 'ar'
-          ? 'نافذة الاتصال العائلي الخاصة بالبعثة 74 مؤكدة الساعة 19:00 بتوقيت القاهرة لمدة 20 دقيقة.'
-          : 'Expedition 74 private family video conference is confirmed for Saturday at 19:00 Cairo Time (20-minute slot).',
-    },
-    {
-      id: 'ann-2',
-      date: lang === 'ar' ? 'قبل 3 أيام · الدعم الأرضي' : '3 days ago · Ground Support',
-      title:
-        lang === 'ar'
-          ? 'جدول تجميع رسائل العائلة المدارية'
-          : 'Orbital Text Bundle Uplinks Twice Daily',
-      body:
-        lang === 'ar'
-          ? 'تُرسل الرسائل النصية المعتمدة في دفعتين يومياً عند الساعة 08:00 و 20:00 بالتوقيت العالمي.'
-          : 'Approved family text notes are bundled into morning and evening uplinks at 08:00 and 20:00 UTC.',
-    },
-  ];
+  const handleSendText = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.trim()) return;
+    onSendMessage({ text: draft.trim() });
+    setDraft('');
+    setShowEmojiPicker(false);
+    showSentToast();
+  };
+
+  const handleQuickSend = (text: string) => {
+    onSendMessage({ text });
+    showSentToast();
+  };
+
+  const handleSendSamplePhoto = (imageUrl: string, label: string) => {
+    onSendMessage({
+      text: label,
+      imageUrl,
+    });
+    setShowPhotoPicker(false);
+    showSentToast();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        onSendMessage({
+          text: lang === 'ar' ? 'صورة من العائلة' : 'Family Photo',
+          imageUrl: reader.result,
+        });
+        setShowPhotoPicker(false);
+        showSentToast();
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleToggleVoice = () => {
+    if (!recording) {
+      setRecording(true);
+      setRecordSeconds(1);
+      timerRef.current = setInterval(() => {
+        setRecordSeconds((s) => s + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setRecording(false);
+      const dur = Math.max(2, recordSeconds);
+      setRecordSeconds(0);
+      onSendMessage({
+        text:
+          lang === 'ar'
+            ? `رسالة صوتية (${dur} ثواني)`
+            : `Voice message (${dur} seconds)`,
+        voiceDurationSec: dur,
+      });
+      showSentToast();
+    }
+  };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-white">
-            {t.communication.title}
-          </h1>
+    <div className="max-w-3xl mx-auto space-y-4">
+      {/* Top Chat Header with Son's Photo & Big Call Buttons */}
+      <section className="rounded-3xl bg-[#0E172B] border border-white/15 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-cyan-300/50 shrink-0">
+            <SafeImage
+              src={astronaut.avatarUrl}
+              alt={lang === 'ar' ? astronaut.nameAr : astronaut.name}
+              className="w-full h-full object-cover"
+              fallbackTitle={astronaut.name}
+            />
+          </div>
+          <div>
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-white">
+              {t.messages.title}
+            </h1>
+            <p className="text-sm sm:text-base text-slate-300">{t.messages.simNote}</p>
+          </div>
         </div>
 
-        {/* Segmented tabs */}
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-[#0C1425] border border-white/10 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-2.5 shrink-0">
           <button
             type="button"
-            onClick={() => setTab('chat')}
-            className={`min-h-[44px] px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              tab === 'chat' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'
-            }`}
+            onClick={() => onStartCall('voice')}
+            className="min-h-[56px] px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-base font-bold flex items-center justify-center gap-2 transition-colors"
           >
-            {t.communication.chatTab}
+            <Phone className="w-5 h-5" />
+            <span>{t.messages.voiceCallShort}</span>
           </button>
           <button
             type="button"
-            onClick={() => setTab('announcements')}
-            className={`min-h-[44px] px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              tab === 'announcements'
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-300 hover:text-white'
-            }`}
+            onClick={() => onStartCall('video')}
+            className="min-h-[56px] px-4 py-3 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-base font-bold flex items-center justify-center gap-2 transition-colors"
           >
-            {t.communication.announcementsTab}
+            <Video className="w-5 h-5" />
+            <span>{t.messages.videoCallShort}</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Infrastructure clarity notice */}
-      <div className="rounded-2xl bg-[#0D1629] border border-cyan-400/20 px-4 py-3 flex items-start gap-2.5 text-xs text-slate-300">
-        <Info className="w-4 h-4 text-cyan-300 shrink-0 mt-0.5" />
-        <span>{t.communication.infraNotice}</span>
-      </div>
-
-      {tab === 'announcements' ? (
-        <div className="space-y-3">
-          {announcements.map((item) => (
-            <article
-              key={item.id}
-              className="rounded-2xl bg-[#0C1425] border border-white/10 p-5 space-y-2"
-            >
-              <div className="flex items-center gap-2 text-xs text-cyan-300">
-                <Megaphone className="w-4 h-4" />
-                <span>{item.date}</span>
-              </div>
-              <h2 className="text-base font-semibold text-white">{item.title}</h2>
-              <p className="text-sm text-slate-300 leading-relaxed">{item.body}</p>
-            </article>
-          ))}
+      {/* Clear Confirmation Banner */}
+      {confirmation && (
+        <div
+          role="status"
+          className="rounded-2xl bg-emerald-500/20 border border-emerald-400/50 px-5 py-3.5 text-lg font-semibold text-emerald-100 flex items-center gap-2.5"
+        >
+          <Check className="w-6 h-6 text-emerald-300 shrink-0" />
+          <span>{confirmation}</span>
         </div>
-      ) : (
-        <div className="rounded-3xl bg-[#0C1425] border border-white/10 overflow-hidden flex flex-col">
-          {/* Message History */}
-          <div className="p-4 sm:p-6 space-y-4 max-h-[460px] overflow-y-auto">
-            {messages.map((msg) => {
-              const isFamily = msg.sender === 'family';
-              return (
+      )}
+
+      {/* WhatsApp-style Large Message Bubbles */}
+      <section className="rounded-3xl bg-[#0B1222] border border-white/15 overflow-hidden flex flex-col">
+        <div className="p-4 sm:p-6 space-y-4 max-h-[430px] overflow-y-auto">
+          {messages.map((msg) => {
+            const isFamily = msg.sender === 'family';
+            return (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${isFamily ? 'items-end' : 'items-start'}`}
+              >
                 <div
-                  key={msg.id}
-                  className={`flex flex-col ${isFamily ? 'items-end' : 'items-start'}`}
+                  className={`max-w-[92%] sm:max-w-[80%] rounded-3xl px-5 py-4 space-y-2 ${
+                    isFamily
+                      ? 'bg-[#124E3B] border border-emerald-400/40 text-white'
+                      : 'bg-[#16223B] border border-white/15 text-white'
+                  }`}
                 >
-                  <div
-                    className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-4 py-3 space-y-1.5 ${
-                      isFamily
-                        ? 'bg-blue-600/25 border border-blue-400/30 text-white'
-                        : msg.sender === 'liaison'
-                        ? 'bg-white/[0.04] border border-white/10 text-slate-200'
-                        : 'bg-cyan-500/15 border border-cyan-400/25 text-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4 text-[11px] text-slate-400">
-                      <span className="font-medium text-cyan-200">
-                        {isFamily
-                          ? lang === 'ar'
-                            ? user.nameAr
-                            : user.name
-                          : lang === 'ar'
-                          ? msg.senderNameAr
-                          : msg.senderName}
-                      </span>
-                      <span className="font-mono-tabular">{msg.timestamp}</span>
-                    </div>
+                  <div className="flex items-center justify-between gap-4 text-sm text-slate-200 font-semibold">
+                    <span>
+                      {isFamily
+                        ? lang === 'ar'
+                          ? 'أنتِ'
+                          : 'You'
+                        : lang === 'ar'
+                        ? msg.senderNameAr
+                        : msg.senderName}
+                    </span>
+                    <span className="font-mono-tabular text-xs sm:text-sm text-slate-300">
+                      {msg.timestamp}
+                    </span>
+                  </div>
 
-                    <p className="text-sm leading-relaxed">
+                  {msg.imageUrl && (
+                    <div className="rounded-2xl overflow-hidden border border-white/15 max-w-xs">
+                      <SafeImage
+                        src={msg.imageUrl}
+                        alt={msg.text}
+                        className="w-full h-44 object-cover"
+                        fallbackTitle={msg.text}
+                      />
+                    </div>
+                  )}
+
+                  {msg.voiceDurationSec ? (
+                    <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-base sm:text-lg font-medium">
+                      <Mic className="w-6 h-6 text-emerald-300 shrink-0" />
+                      <span>
+                        {lang === 'ar'
+                          ? `رسالة صوتية مسجلة (${msg.voiceDurationSec} ث)`
+                          : `Voice message (${msg.voiceDurationSec}s)`}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-lg sm:text-xl leading-relaxed">
                       {lang === 'ar' && msg.textAr ? msg.textAr : msg.text}
                     </p>
+                  )}
 
-                    <div className="flex items-center justify-end gap-1 text-[11px] text-slate-400">
-                      <CheckCheck className="w-3.5 h-3.5 text-cyan-300" />
-                      <span>{msg.status}</span>
-                    </div>
+                  <div className="flex items-center justify-end gap-1.5 text-sm text-emerald-200">
+                    <CheckCheck className="w-4 h-4" />
+                    <span>
+                      {msg.status === 'Seen by Family Hub'
+                        ? lang === 'ar'
+                          ? 'وصلت واتشافت'
+                          : 'Delivered & Seen'
+                        : lang === 'ar'
+                        ? 'تم الإرسال (تجريبي)'
+                        : 'Sent (Demo)'}
+                    </span>
                   </div>
                 </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* One-Tap Friendly Messages */}
+        <div className="px-4 sm:px-6 py-4 border-t border-white/10 bg-[#0E172B] space-y-2.5">
+          <p className="text-base font-semibold text-slate-200">
+            {t.messages.quickRepliesTitle}
+          </p>
+          <div className="flex flex-wrap gap-2.5">
+            {QUICK_FRIENDLY_REPLIES.map((tpl, idx) => {
+              const label = lang === 'ar' ? tpl.ar : tpl.en;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleQuickSend(label)}
+                  className="min-h-[48px] px-4 py-2.5 rounded-2xl bg-[#182645] hover:bg-[#22355E] border border-cyan-400/30 text-base font-medium text-white transition-colors"
+                >
+                  {label}
+                </button>
               );
             })}
           </div>
+        </div>
 
-          {/* Quick Supportive Templates */}
-          <div className="px-4 sm:px-6 py-3 border-t border-white/10 bg-[#080E1B] space-y-2">
-            <p className="text-xs text-slate-400">{t.communication.templatesLabel}</p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {QUICK_MESSAGE_TEMPLATES.map((tpl, idx) => {
-                const text = lang === 'ar' ? tpl.ar : tpl.en;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setDraft(text)}
-                    className="min-h-[40px] px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-xs text-slate-200 whitespace-nowrap shrink-0 transition-colors"
-                  >
-                    {text}
-                  </button>
-                );
-              })}
+        {/* Optional Large Emoji Tray */}
+        {showEmojiPicker && (
+          <div className="px-4 sm:px-6 py-4 border-t border-white/10 bg-[#101B32]">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setDraft((prev) => `${prev}${emoji}`)}
+                  className="min-h-[56px] rounded-2xl bg-white/5 hover:bg-white/15 text-3xl flex items-center justify-center"
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Message Composer */}
-          <form
-            onSubmit={handleSubmit}
-            className="p-4 sm:p-5 border-t border-white/10 bg-[#070C17] flex items-center gap-3"
-          >
+        {/* Optional Photo Attachment Picker */}
+        {showPhotoPicker && (
+          <div className="px-4 sm:px-6 py-4 border-t border-white/10 bg-[#101B32] space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-base font-semibold text-white">
+                {t.messages.attachSampleTitle}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowPhotoPicker(false)}
+                className="min-h-[44px] px-3 rounded-xl bg-white/10 text-sm font-semibold text-white inline-flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                <span>{t.messages.cancel}</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {DEMO_PHOTOS.map((photo) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  onClick={() =>
+                    handleSendSamplePhoto(
+                      photo.imageUrl,
+                      lang === 'ar' ? photo.titleAr : photo.title
+                    )
+                  }
+                  className="rounded-2xl overflow-hidden border border-white/20 bg-[#0B1222] text-start hover:border-cyan-400 transition-colors"
+                >
+                  <SafeImage
+                    src={photo.imageUrl}
+                    alt={lang === 'ar' ? photo.titleAr : photo.title}
+                    className="w-full h-24 object-cover"
+                    fallbackTitle={photo.title}
+                  />
+                  <span className="block p-2.5 text-sm font-semibold text-white">
+                    {lang === 'ar' ? photo.titleAr : photo.title}
+                  </span>
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="min-h-[96px] rounded-2xl border-2 border-dashed border-cyan-400/50 bg-cyan-500/10 hover:bg-cyan-500/20 p-4 flex flex-col items-center justify-center gap-2 text-center text-base font-semibold text-cyan-200"
+              >
+                <Camera className="w-7 h-7" />
+                <span>{t.messages.attachDevicePhoto}</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Senior-Friendly Composer: Clearly Labeled Buttons + Large Input + Huge Green SEND */}
+        <form
+          onSubmit={handleSendText}
+          className="p-4 sm:p-5 border-t border-white/15 bg-[#080E1B] space-y-3"
+        >
+          {/* Large Easy-Label Tool Row: Emoji, Photo, Voice */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmojiPicker((v) => !v);
+                setShowPhotoPicker(false);
+              }}
+              className={`min-h-[56px] px-3 py-2.5 rounded-2xl border text-base font-semibold flex items-center justify-center gap-2 transition-colors ${
+                showEmojiPicker
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-100'
+                  : 'bg-[#121D35] border-white/20 text-white hover:bg-white/10'
+              }`}
+            >
+              <Smile className="w-6 h-6 text-amber-300 shrink-0" />
+              <span>{t.messages.emojiLabel}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowPhotoPicker((v) => !v);
+                setShowEmojiPicker(false);
+              }}
+              className={`min-h-[56px] px-3 py-2.5 rounded-2xl border text-base font-semibold flex items-center justify-center gap-2 transition-colors ${
+                showPhotoPicker
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-100'
+                  : 'bg-[#121D35] border-white/20 text-white hover:bg-white/10'
+              }`}
+            >
+              <Camera className="w-6 h-6 text-cyan-300 shrink-0" />
+              <span>{t.messages.photoLabel}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleToggleVoice}
+              className={`min-h-[56px] px-3 py-2.5 rounded-2xl border text-base font-semibold flex items-center justify-center gap-2 transition-colors ${
+                recording
+                  ? 'bg-red-600 border-red-400 text-white'
+                  : 'bg-[#121D35] border-white/20 text-white hover:bg-white/10'
+              }`}
+            >
+              {recording ? (
+                <>
+                  <Square className="w-5 h-5 shrink-0" />
+                  <span className="truncate">
+                    {t.messages.stopVoiceLabel} ({recordSeconds}s)
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Mic className="w-6 h-6 text-emerald-300 shrink-0" />
+                  <span>{t.messages.voiceLabel}</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch gap-3">
             <input
               type="text"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={t.communication.inputPlaceholder}
-              className="flex-1 min-h-[46px] px-4 py-2.5 rounded-xl bg-[#0C1425] border border-white/15 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+              placeholder={t.messages.inputPlaceholder}
+              className="flex-1 min-h-[60px] px-5 py-3 rounded-2xl bg-[#0F182D] border border-white/25 text-lg sm:text-xl text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-400"
             />
             <button
               type="submit"
               disabled={!draft.trim()}
-              className="min-h-[46px] px-4 sm:px-5 rounded-xl bg-cyan-400 hover:bg-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-semibold text-sm flex items-center gap-2 transition-colors shrink-0"
+              className="min-h-[60px] px-7 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 text-xl font-bold flex items-center justify-center gap-2.5 transition-colors shrink-0"
             >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.communication.sendBtn}</span>
+              <Send className="w-6 h-6" />
+              <span>{t.messages.sendButton}</span>
             </button>
-          </form>
-        </div>
-      )}
+          </div>
+        </form>
+      </section>
     </div>
   );
 };
